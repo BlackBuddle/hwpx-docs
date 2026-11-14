@@ -1,0 +1,20 @@
+{
+  "name": "hwpx-docs",
+  "version": "0.3.0",
+  "description": "Make, read and check HWPX (OWPML, KS X 6101) documents that open in Hancom Office Hangul: JSON spec builder, Markdown/HTML input, text and styles, tables, shapes and Hangul charts, fields and references, page setup, forms from images, filling received forms, HWP conversion, password and distribution post-step with Hangul, page previews without Hangul, page fitting for readability, 공문, readability checks.",
+  "author": {
+    "name": "BlackBuddle"
+  },
+  "homepage": "https://github.com/BlackBuddle/hwpx-docs",
+  "repository": "https://github.com/BlackBuddle/hwpx-docs",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "hwpx",
+    "owpml",
+    "hwp",
+    "korean",
+    "document",
+    "gongmun",
+    "hancom"
+  ]
+}

@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# render and check outputs (examples keep only their page-1 PNG)
+out/
+pages/
+*_p[0-9]*.png
+*.bmp
+*_side*.png
+ov.png
+!examples/*/page1.png
+
+# editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+.private-patterns
