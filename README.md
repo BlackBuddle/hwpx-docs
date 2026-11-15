@@ -20,6 +20,7 @@
 <a href="https://github.com/BlackBuddle/hwpx-docs/stargazers"><img src="https://img.shields.io/github/stars/BlackBuddle/hwpx-docs?style=flat&amp;color=a3301c" alt="GitHub stars"></a>
 <a href="#요구-사항"><img src="https://img.shields.io/badge/python-3.10%2B-a3301c" alt="Python 3.10+"></a>
 <a href="#설치"><img src="https://img.shields.io/badge/Claude%20Code-plugin-a3301c" alt="Claude Code plugin"></a>
+<a href="https://www.threads.com/@kimkyuho_98"><img src="https://img.shields.io/badge/follow-%40kimkyuho__98-000000?logo=threads&amp;logoColor=white" alt="Threads @kimkyuho_98"></a>
 </p>
 
 </div>
