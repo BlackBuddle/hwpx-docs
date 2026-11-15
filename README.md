@@ -1,6 +1,30 @@
-# hwpx-docs
+<div align="center">
 
-한컴오피스 한글에서 여는 HWPX 문서를 만들고 읽고 검사하는 Claude Code 플러그인입니다(버전 0.3.0). HWPX는 공개 국가표준 OWPML(KS X 6101) 형식이며 문서를 만들고 읽는 데는 한글 프로그램이 필요 없고 Python 표준 라이브러리만 씁니다.
+<img src="assets/icon.svg" width="120" height="120" alt="hwpx-docs 아이콘">
+
+<h1>hwpx-docs</h1>
+
+<p>한컴오피스 한글에서 여는 HWPX 문서를 만들고 읽고 검사하는 Claude Code 플러그인</p>
+
+<p>
+<a href="#설치">설치</a> ·
+<a href="#사용-예-프로젝트-계획-문서-만들기">사용 예</a> ·
+<a href="docs/">문서</a>
+</p>
+
+<p>한국어 · <a href="#english">English</a></p>
+
+<p>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-a3301c" alt="License: AGPL-3.0"></a>
+<a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/badge/version-0.3.0-a3301c" alt="Version 0.3.0"></a>
+<a href="https://github.com/BlackBuddle/hwpx-docs/stargazers"><img src="https://img.shields.io/github/stars/BlackBuddle/hwpx-docs?style=flat&amp;color=a3301c" alt="GitHub stars"></a>
+<a href="#요구-사항"><img src="https://img.shields.io/badge/python-3.10%2B-a3301c" alt="Python 3.10+"></a>
+<a href="#설치"><img src="https://img.shields.io/badge/Claude%20Code-plugin-a3301c" alt="Claude Code plugin"></a>
+</p>
+
+</div>
+
+HWPX는 공개 국가표준 OWPML(KS X 6101) 형식이며 문서를 만들고 읽는 데는 한글 프로그램 없이 Python 표준 라이브러리만 씁니다(버전 0.3.0).
 
 > 한글, 한컴오피스는 (주)한글과컴퓨터의 상표 또는 등록 상표입니다. 이 프로젝트는 (주)한글과컴퓨터와 관계가 없습니다.
 
@@ -103,6 +127,35 @@ python lib/hd.py selftest
 `python lib/hd.py help`는 명령 전체를 보여 줍니다. `values.json`에는 칸 이름이나 `slots`가 보여 준 칸 번호를 씁니다(예: `{"성명": "가람", "t1.r3c2": "000-0000-0000"}`). 없는 칸 이름이 있으면 `UNMATCHED`를 알리고 파일을 쓰지 않습니다.
 
 스펙 형식은 [docs/spec.md](docs/spec.md)에 있습니다. 같은 모양을 여러 번 쓸 때는 `styles`에 이름을 붙이고 문단·셀·런에서 `"class": "이름"`으로 가져다 쓰고 한글의 스타일 목록에 들어가는 스타일은 `named_styles`로 만듭니다. 0.3.0에서 늘어난 스펙 키(바탕쪽 `master_pages`, 세로쓰기 `text_direction`, 첫 글자 장식 `dropcap` 등)는 spec.md의 "More keys of the feature packages" 절에 키마다 값과 예시 한 줄로 정리했습니다.
+
+## 사용 예: 프로젝트 계획 문서 만들기
+
+어느 팀이 다음 단계 계획서를 한글 문서로 내야 하는 상황을 예로 듭니다. 실제로 쓴 과정을 일반화했고 예시 파일(가상 내용)은 [examples/plan-workflow](examples/plan-workflow)에 있습니다.
+
+1. **참고자료 모으기.** 자료를 한 번에 하나씩 건네면 Claude가 번호(REF-1, REF-2 …)를 붙여 기록하고 읽으면서 나온 결정 거리를 미결 결정 목록에 모읍니다. 기록 예시는 [references.md](examples/plan-workflow/references.md)입니다.
+   > "1단계 운영 결과 보고야. REF로 기록하고 정해야 할 것이 있으면 목록에 넣어 줘."
+2. **결정하고 계획서 쓰기.** 미결 결정을 하나씩 정하면 Claude가 결과와 근거 번호를 적고 결정이 다 끝나면 그 내용으로 공문 형식의 Markdown(또는 HTML) 계획서를 씁니다. 문장은 gongmun-style 규칙으로, 설명하는 글은 ko-writing 규칙으로 다듬습니다. 결과는 [plan.md](examples/plan-workflow/plan.md)입니다.
+   > "D-1은 6과목으로 하자. 결정을 반영해서 공문 형식으로 계획서를 써 줘."
+3. **HWPX 만들기.** Markdown은 개조식 보고서 프리셋으로, HTML은 CSS를 계산해 HWPX로 바꿉니다.
+   > "이 계획서를 한글 문서로 만들어 줘."
+   ```
+   python lib/hd.py md plan.md plan.hwpx
+   ```
+4. **쪽 넘김 줄이기.** `readable` 프로필은 제목과 첫 내용, 표와 캡션 같은 읽기 단위를 한 쪽에 묶고 긴 표는 머리 행을 반복합니다. 표를 통째로 넘겨 앞 쪽이 크게 비면 큰 표만 행 사이에서 나눕니다. `check`로 먼저 보고 `fix`로 새 파일을 씁니다.
+   > "읽기 좋게 쪽을 맞춰 줘."
+   ```
+   python lib/hd.py pagefit check plan.hwpx --profile readable
+   python lib/hd.py pagefit fix plan.hwpx plan-fit.hwpx --profile readable
+   ```
+5. **쪽마다 확인하기.** 한글이 있으면 한글로 열어 보고 없으면 자체 렌더러로 쪽 그림을 만들어 봅니다.
+   > "쪽마다 그림으로 보여 줘."
+   ```
+   python lib/hd.py render hwpx plan-fit.hwpx pages/ --backend preview
+   ```
+6. **다시 고치기.** 내용이 바뀌면 Markdown을 고치고 3~5단계를 다시 돌리면 되고 쪽 모양만 거슬리면 어느 쪽의 무엇인지 말해 주면 됩니다.
+   > "2쪽 표가 다음 쪽으로 넘어가지 않게 해 줘."
+
+예시의 [plan.hwpx](examples/plan-workflow/plan.hwpx)는 plan.md에 3~4단계를 그대로 적용한 결과입니다.
 
 ## 프리셋과 --fallback
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hwpx-docs: 한글 HWPX 문서를 만드는 Claude Code 플러그인</title>
+<meta name="description" content="Claude에게 말하면 한글에서 바로 열리는 HWPX 문서를 만들고 읽고 고치고 검사합니다. 만들고 읽는 데는 한글 프로그램이 필요 없습니다.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top"><b><img src="icon.svg" alt="" width="28" height="28">hwpx-docs</b><a href="https://github.com/BlackBuddle/hwpx-docs">GitHub 저장소</a></header>
+
+<div class="hero">
+  <div>
+    <p class="kicker">Claude Code 플러그인 · 버전 0.3.0</p>
+    <h1>한글에서 바로 열리는 HWPX 문서를 Claude가 만들고 읽고 고칩니다</h1>
+    <p class="lead">공문, 보고서, 회의록, 신청서를 말로 시키면 HWPX 파일이 나옵니다. 문서를 만들고 읽는 데는 한글 프로그램 없이 Python 표준 라이브러리만 씁니다.</p>
+    <pre>/plugin marketplace add BlackBuddle/hwpx-docs
+/plugin install hwpx-docs@blackbuddle</pre>
+    <p class="note">Claude Code에서 두 줄을 입력하면 스킬 11개가 생깁니다.</p>
+  </div>
+  <div class="stack" aria-hidden="true"><img src="img/meeting-minutes.png" alt="" width="794" height="1122"><img src="img/report-markdown.png" alt="" width="794" height="1123"><img src="img/gongmun-notice.png" alt="" width="794" height="1122"></div>
+</div>
+
+<section>
+  <h2>할 수 있는 일</h2>
+  <div class="caps">
+    <div><h3>만들기</h3><p>JSON 스펙, Markdown, HTML로 문서를 만듭니다. 셀 병합과 셀별 선·채움이 있는 표, 그림, 도형, 수식, 한글 차트, 머리말·꼬리말, 각주를 씁니다.</p><span class="cmd">hd build · hd md · hd html</span></div>
+    <div><h3>읽기</h3><p>기존 HWPX를 스펙(JSON)이나 텍스트·Markdown으로 꺼냅니다. 표는 Markdown 표로, 각주는 <code>[^n]</code>으로 바꿉니다.</p><span class="cmd">hd read · hd text</span></div>
+    <div><h3>고치기</h3><p>받은 양식에 칸 이름(성명, 연락처)이나 칸 번호로 값을 넣고 체크 상자를 표시합니다. 바꾼 뒤에는 구조와 줄 수, 남은 ○○ 같은 자리표시를 검사합니다.</p><span class="cmd">hd slots · hd edit · hd guard</span></div>
+    <div><h3>검사</h3><p>단어 중간 줄바꿈이나 양쪽 정렬로 벌어진 빈칸처럼 읽기 어려운 곳을 찾습니다. 주민등록번호·전화번호 같은 개인 정보는 한글 없이 가립니다.</p><span class="cmd">hd readability · hd secure --mask-private</span></div>
+    <div><h3>한글 없는 미리보기</h3><p>자체 렌더러가 표, 차트, 수식, 각주, 세로쓰기를 한글의 쪽 나눔 규칙대로 그리고 결과는 SVG·HTML로 어디서나 볼 수 있습니다. PNG는 Windows의 Edge로 만듭니다.</p><span class="cmd">hd preview</span></div>
+    <div><h3>가독성 프로필</h3><p>제목만 쪽 끝에 남은 곳이나 한 줄만 넘어간 곳을 고칩니다. "읽기 좋게"라고 하면 <code>readable</code> 프로필이 표와 캡션 같은 읽기 단위를 한 쪽에 모으고 긴 표는 머리 행을 반복합니다.</p><span class="cmd">hd pagefit check · hd pagefit fix</span></div>
+    <div><h3>공문 규칙</h3><p>공문 시작 스펙과 gongmun-style 스킬로 어투, 항목 기호, 날짜·금액 표기를 맞추고 기안문을 검사합니다.</p><span class="cmd">hd gongmun-check</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>예제</h2>
+  <div class="gallery">
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/gongmun-notice"><img src="img/gongmun-notice.png" alt="공문 안내문 1쪽" width="794" height="1122" loading="lazy"><figcaption>공문 안내문</figcaption></a></figure>
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/report-markdown"><img src="img/report-markdown.png" alt="Markdown으로 만든 개조식 보고서 1쪽" width="794" height="1123" loading="lazy"><figcaption>개조식 보고서 (Markdown)</figcaption></a></figure>
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/meeting-minutes"><img src="img/meeting-minutes.png" alt="회의록 1쪽" width="794" height="1122" loading="lazy"><figcaption>회의록</figcaption></a></figure>
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/application-form"><img src="img/application-form.png" alt="체크 상자가 있는 신청서 1쪽" width="794" height="1122" loading="lazy"><figcaption>신청서 (체크 상자)</figcaption></a></figure>
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/chart-report"><img src="img/chart-report.png" alt="차트가 있는 보고 1쪽" width="794" height="1122" loading="lazy"><figcaption>차트가 있는 보고</figcaption></a></figure>
+    <figure><a href="https://github.com/BlackBuddle/hwpx-docs/tree/main/examples/facility-checklist"><img src="img/facility-checklist.png" alt="표 중심 목록 1쪽" width="794" height="1122" loading="lazy"><figcaption>표 중심 목록</figcaption></a></figure>
+  </div>
+  <p class="note">한글 2024가 그린 1쪽입니다. 그림을 누르면 원본 스펙과 HWPX 파일이 있는 폴더로 갑니다. 기관, 사람, 연락처는 모두 가상입니다.</p>
+</section>
+
+<section>
+  <h2>이렇게 씁니다</h2>
+  <ol class="steps">
+    <li>참고자료를 하나씩 건네고 계획서 초안을 부탁합니다. <q>이 자료를 바탕으로 다음 단계 계획서를 공문 형식으로 써 줘.</q></li>
+    <li>쓴 Markdown을 한글 문서로 바꿉니다. <q>이 계획서를 한글 문서로 만들어 줘.</q> <code>hd md plan.md plan.hwpx</code></li>
+    <li>쪽 넘김을 다듬습니다. <q>읽기 좋게 쪽을 맞춰 줘.</q> <code>hd pagefit fix plan.hwpx plan-fit.hwpx --profile readable</code></li>
+    <li>쪽마다 확인합니다. 한글이 없으면 <code>hd preview</code>로 쪽 그림을 봅니다.</li>
+  </ol>
+  <p class="note">전체 과정은 README의 <a href="https://github.com/BlackBuddle/hwpx-docs#사용-예-프로젝트-계획-문서-만들기">사용 예</a>에 있습니다.</p>
+</section>
+
+<section>
+  <h2>요구 사항</h2>
+  <table>
+    <tr><th>작업</th><th>필요한 것</th></tr>
+    <tr><td>만들기, 읽기, 고치기, 검사, 쪽 맞추기, 미리보기(SVG·HTML)</td><td>Python 3.10 이상. 운영체제와 한글 설치는 상관없습니다</td></tr>
+    <tr><td>미리보기 PNG, 실제 글꼴 폭으로 줄 수 계산</td><td>Windows, Microsoft Edge</td></tr>
+    <tr><td>한글로 쪽 그리기, HWP↔HWPX 변환, PDF 저장, 문서 암호</td><td>Windows, 한글 2024, pywin32</td></tr>
+  </table>
+</section>
+
+<section class="two">
+  <div>
+    <h2>한계</h2>
+    <ul>
+      <li>.hwp는 직접 읽거나 쓰지 않습니다. 한글로 HWPX로 바꾼 뒤 씁니다.</li>
+      <li>자체 미리보기는 한글이 그린 쪽과 같은 이미지가 아닙니다. 글자 효과와 무늬 채움은 그리지 않습니다.</li>
+      <li><code>edit</code>는 글자만 바꾸고 행이나 표를 늘리지 않습니다.</li>
+      <li>개인 정보 가리기는 암호화가 아니며 정해진 형식만 찾습니다.</li>
+      <li>남이 준 스펙으로 만들 때는 그림 경로(<code>src</code>)가 가리키는 파일을 먼저 확인하십시오.</li>
+      <li>한글 기능 167항목 가운데 156항목을 지원합니다(<a href="https://github.com/BlackBuddle/hwpx-docs/blob/main/docs/coverage.md">대응 범위</a>).</li>
+    </ul>
+  </div>
+  <div>
+    <h2>라이선스</h2>
+    <p>GNU AGPL-3.0-or-later, 저작권자 BlackBuddle. 고친 판을 배포하거나 네트워크 서비스로 제공하면 그 소스도 같은 라이선스로 공개해야 합니다. 이 프로그램은 보증 없이 제공합니다.</p>
+    <p class="note">한글, 한컴오피스는 (주)한글과컴퓨터의 상표 또는 등록 상표입니다. 이 프로젝트는 (주)한글과컴퓨터와 관계가 없습니다.</p>
+  </div>
+</section>
+
+<section lang="en">
+  <h2>In English</h2>
+  <p class="en">hwpx-docs is a Claude Code plugin that makes, reads, edits and checks HWPX documents (OWPML, KS X 6101) for Hancom Office Hangul. Making and reading need only the Python 3.10+ standard library on any OS. An own renderer previews pages without Hangul, and page-fit profiles keep headings, tables and captions together. Rendering in Hangul, conversion and passwords need Windows with Hangul 2024. License: AGPL-3.0-or-later.</p>
+</section>
+</div>
+<footer><div class="wrap"><a href="https://github.com/BlackBuddle/hwpx-docs">github.com/BlackBuddle/hwpx-docs</a> · 버전 0.3.0 · AGPL-3.0-or-later</div></footer>
+</body>
+</html>
