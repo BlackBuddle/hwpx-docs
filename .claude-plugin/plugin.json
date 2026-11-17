@@ -1,7 +1,7 @@
 {
   "name": "hwpx-docs",
-  "version": "0.3.0",
-  "description": "Make, read and check HWPX (OWPML, KS X 6101) documents that open in Hancom Office Hangul: JSON spec builder, Markdown/HTML input, text and styles, tables, shapes and Hangul charts, fields and references, page setup, forms from images, filling received forms, HWP conversion, password and distribution post-step with Hangul, page previews without Hangul, page fitting for readability, 공문, readability checks.",
+  "version": "0.4.0",
+  "description": "Make, read, edit and check HWPX (OWPML, KS X 6101) and HWP (HWP 5.0) documents that open in Hancom Office Hangul, with the same commands for both: JSON spec builder, Markdown/HTML input, text and styles, tables, shapes and Hangul charts, fields and references, page setup, forms from images, filling received forms, HWP conversion, password and distribution post-step with Hangul, page previews without Hangul, page fitting for readability, 공문, readability checks.",
   "author": {
     "name": "BlackBuddle"
   },

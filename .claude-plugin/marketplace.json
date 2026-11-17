@@ -8,8 +8,20 @@
     {
       "name": "hwpx-docs",
       "source": "./",
-      "description": "Make, read and check HWPX (OWPML) documents for Hancom Office Hangul",
-      "version": "0.3.0"
+      "description": "Make, read, edit and check HWPX (OWPML) and HWP (HWP 5.0) documents for Hancom Office Hangul",
+      "version": "0.4.0"
+    },
+    {
+      "name": "hwpx-docs-forms",
+      "source": "./addons/hwpx-docs-forms",
+      "description": "Optional add-on of hwpx-docs: layout rules of official Korean forms (measured on real 별지 서식) as packs, so a new form gets the page, fonts, label shading, lines and parts of its family",
+      "version": "0.1.0"
+    },
+    {
+      "name": "hwpx-docs-privacy",
+      "source": "./addons/hwpx-docs-privacy",
+      "description": "Optional add-on of hwpx-docs: the model sees pseudonym tags instead of the personal data that its rules find in Hangul documents; real values stay in a local vault and return when a document is written. A guard against slips, not a boundary",
+      "version": "0.1.0"
     }
   ]
 }
