@@ -87,6 +87,21 @@ may shrink, so more words fit on a justified line); `snap`; `autospace`; `border
 or `{"list": i, "level": n}` = Hangul automatic number from `numberings`); `outline_level` (개요 0-9); `tabs`
 (`[{"pos": mm, "type": "left|right|center|decimal", "leader": "none|dot|..."}]`).
 
+`hang` (block or class; a number = list level, `true` = 0) makes a paragraph a list item "mark text" with its text on a
+common column (rules H27). Consecutive blocks with `hang` are one list. The builder (`resolve_hang`, also run by the
+layout checks, so the spec is changed in place and a second run changes nothing) sets for each item `indent` = -(widest
+mark + one space of the item's level in the list), writes ONE TAB instead of the space after the mark, and adds `tabs`
+`{"stops": [], "auto_left": true}` (the tab ends at the hanging position, so the text of the first line and the wrapped
+lines start on one vertical line, and justification cannot stretch the gap). A list = the run of items; another kind of
+mark (number, 가나다, other) at a level starts a list of its own, and an item of a lower level ends the lists of the
+higher levels. `left` stays the first-line start of the item. `hang_under`: `left` = the text column of the nearest
+item of a lower level (the mark of a sub-level starts under the text of its parent, the report preset); without it the
+class value of `left` stays (the 공문 levels l1-l8, 2타 per level). The text column of a list is the widest of
+`left` + mark + gap over its items, so items with another `left` share it (the 붙임 lines). `hang_mark` (regex) = the
+mark when it is more than one word and the white space after it (`"붙임[ \\t]+\\d+\\.[ \\t]+"`); `hang_gap` = spaces
+between the mark and the text for the width (default 1). Example:
+`{"class": "l1", "p": "10. 안건"}` with `"styles": {"l1": {"left": 0, "hang": 1}}`.
+
 ## Table
 
 ```json

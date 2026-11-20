@@ -11,6 +11,7 @@ Used by checks that need to know where text goes (readability, edit guard). Styl
 builder (core/build.py Doc.klass).
 """
 from . import build, read, textfit
+from .units import column_starts
 
 HU_MM = 283.465
 CELL_ONLY = {'p', 'blocks', 'cs', 'rs', 'fill', 'border', 'pad', 'valign', 'diag', 'diag_line', 'protect', 'editable', 'formula'}
@@ -38,7 +39,8 @@ class Layout:
     def __init__(self, spec):
         self.spec = spec
         from ..table import inline
-        inline.resolve(spec)        # a table without `inline` is a character unless it flows (TB11), as the builder decides
+        build.resolve_hang(spec)    # list items: the text column, as the builder resolves it (rules.md H-row)
+        inline.resolve(spec)       # a table without `inline` is a character unless it flows (TB11), as the builder decides
         self.paras, self.cells, self.tables = [], [], []
         self.lost = []              # (where, table, block, side, pt): space that Hangul ignores next to a table
         self.styles = spec.get('styles', {})
@@ -75,17 +77,18 @@ class Layout:
                 chars = {k: v for k, v in {**inh, **e}.items() if k in read.CHAR_KEYS}
                 base = {**self.cell_para, **chars, **t.get('cell', {})}
                 tpad = t.get('pad', [1.8, 1.8, 0.5, 0.5])
-                for r, row in enumerate(t.get('rows', []), 1):
-                    cells = row.get('cells', []) if isinstance(row, dict) else row
+                trows = t.get('rows', [])
+                rcells = [row.get('cells', []) if isinstance(row, dict) else row for row in trows]
+                for cells in rcells:            # a text cell is a dict in the spec, so that a fix changes it
+                    cells[:] = [{'p': x} if isinstance(x, str) else x for x in cells]
+                starts, _ = column_starts([[(int(self.eff(x).get('cs', 1)), int(self.eff(x).get('rs', 1))) for x in cells]
+                                           for cells in rcells])
+                for r, (row, cells, row_starts) in enumerate(zip(trows, rcells, starts), 1):
                     rs = dict(base, **(row.get('style', {}) if isinstance(row, dict) else {}))
-                    c = 0
-                    for k, cell in enumerate(cells, 1):
-                        if isinstance(cell, str):
-                            cell = cells[k - 1] = {'p': cell}   # in the spec, so that a fix changes it
+                    for k, (cell, c) in enumerate(zip(cells, row_starts), 1):
                         ce = self.eff(cell)
                         span = ce.get('cs', 1)
                         cw = sum(t['cols'][c:c + span]) if c < len(t['cols']) else 0
-                        c += span
                         pad = ce.get('pad', tpad)
                         pad = [mm(x) for x in (pad if isinstance(pad, list) else [pad] * 4)]
                         cfill = ce.get('fill') or fill

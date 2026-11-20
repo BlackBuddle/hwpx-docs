@@ -78,7 +78,7 @@ def cwidth(ch, st):
         return sz + sv(st['spacing'], lg) / 100 * sz    # 세로쓰기: a letter (and . ,) stands in a full cell (P14)
     em = SPACE_EM if ch == ' ' and not st.get('font_space') else textfit.gdi().em(ch, face(st, lg), bool(st['bold']))
     w = em * sz * sv(st['ratio'], lg) / 100
-    return w + sv(st['spacing'], lg) / 100 * sz
+    return w * (1 + sv(st['spacing'], lg) / 100)     # the 자간 is a % of the character's own advance (rules H28)
 
 
 def fam(name):

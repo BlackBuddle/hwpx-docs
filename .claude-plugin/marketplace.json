@@ -9,7 +9,7 @@
       "name": "hwpx-docs",
       "source": "./",
       "description": "Make, read, edit and check HWPX (OWPML) and HWP (HWP 5.0) documents for Hancom Office Hangul",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "hwpx-docs-forms",

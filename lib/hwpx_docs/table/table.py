@@ -1,5 +1,5 @@
 """Tables: grid, merges, per-cell lines and fills, sizes."""
-from ..core.units import CHAR_KEYS, PARA_KEYS, hu, inherit, line, quad, sides_of
+from ..core.units import CHAR_KEYS, PARA_KEYS, column_starts, hu, inherit, line, quad, sides_of
 from . import ext, fills
 
 
@@ -17,28 +17,21 @@ class TableMixin:
         nrow = len(rows_spec)
         ncol = len(cols)
         # place cells (HTML-like flow): a cell takes the next free grid position in its row
-        taken = {}
-        cells = []
-        for r, row in enumerate(rows_spec):
+        rows_cells = []
+        for row in rows_spec:
             if isinstance(row, dict):
                 rstyle, row_cells = row.get('style', {}), row['cells']
             else:
                 rstyle, row_cells = {}, row
-            c = 0
-            for cell in row_cells:
-                if not isinstance(cell, dict):
-                    cell = {'p': '' if cell is None else str(cell)}
-                cell = dict(rstyle, **self.klass(cell))      # row style < class < the cell's own props
-                while (r, c) in taken:
-                    c += 1
+            rows_cells.append([dict(rstyle, **self.klass(cell if isinstance(cell, dict) else {'p': '' if cell is None else str(cell)}))
+                               for cell in row_cells])      # row style < class < the cell's own props
+        starts, taken = column_starts([[(int(c.get('cs', 1)), int(c.get('rs', 1))) for c in rc] for rc in rows_cells])
+        cells = []
+        for r, (rc, st) in enumerate(zip(rows_cells, starts)):
+            for cell, c in zip(rc, st):
                 if c >= ncol:
                     raise ValueError(f'table row {r}: too many cells')
-                rs, cs = int(cell.get('rs', 1)), int(cell.get('cs', 1))
-                for dr in range(rs):
-                    for dc in range(cs):
-                        taken[(r + dr, c + dc)] = True
-                cells.append((r, c, rs, cs, cell))
-                c += cs
+                cells.append((r, c, int(cell.get('rs', 1)), int(cell.get('cs', 1)), cell))
         for r in range(nrow):
             for c in range(ncol):
                 if (r, c) not in taken:

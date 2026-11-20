@@ -7,6 +7,27 @@ import struct
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def column_starts(rows):
+    """Where the cells of a table stand: `rows` = per row a list of (colspan, rowspan); returns (first column of each cell per
+    row, the set of grid places (row, column) that cells cover). A cell takes the next place in its row that no cell of a row
+    above (rowspan) covers: the placing of table/table.py, which the layout checks and css_layout must repeat to know a cell's width."""
+    taken, out = set(), []
+    for r, cells in enumerate(rows):
+        c, starts = 0, []
+        for cs, rs in cells:
+            while (r, c) in taken:
+                c += 1
+            taken |= {(r + i, c + j) for i in range(rs) for j in range(cs)}
+            starts.append(c)
+            c += cs
+        out.append(starts)
+    return out, taken
+
+
+class SpecError(ValueError):
+    """A fault in a spec that the user can fix (a wrong `hang_mark` pattern): `hd` prints the message and exits with 2, no traceback."""
+
+
 TEMPLATE = os.path.join(HERE, 'template')
 
 

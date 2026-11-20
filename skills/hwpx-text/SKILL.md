@@ -1,6 +1,6 @@
 ---
 name: hwpx-text
-description: Text in HWPX — fonts, sizes, 자간/장평, paragraph spacing, indents, line breaks, links, footnotes, fields, equations; Markdown or HTML to HWPX (presets, --fallback); readability check (RD01-RD12). Use for 마크다운/HTML을 한글 문서로, 글자 모양, 문단 모양, 가독성.
+description: Text in HWPX — fonts, sizes, 자간/장평, paragraph spacing, indents, line breaks, links, footnotes, fields, equations; Markdown or HTML to HWPX (presets, --fallback); readability check (RD01-RD14). Use for 마크다운/HTML을 한글 문서로, 글자 모양, 문단 모양, 가독성.
 ---
 
 # HWPX text
@@ -45,5 +45,14 @@ description: Text in HWPX — fonts, sizes, 자간/장평, paragraph spacing, in
   default). Text that wraps only between words needs `"word"`.
 - Negative indent = hanging: the first line starts at `left`, the wrapped lines at `left + |indent|`.
 - `condense` (공백 최소값) changes where justified lines break.
+- List items: put `"hang": <level>` on the block or its class and write "mark text"; the builder puts the text of the
+  first line and of the wrapped lines on one column (a tab after the mark, `docs/spec.md`, H27). Markdown lists and
+  HTML `ul`/`ol` get it from the converter; a sub-level mark starts under the text of its parent (report preset).
+- A space is 0.5 em wide in Hangul unless `font_space` is set; the 자간 (`spacing`) is a % of the advance of each character, spaces included (H28).
+- RD14: a wrapped paragraph whose last line is short (under 30 % of the line, or 2 words or fewer under 60 %) is
+  fixed by the 자간 of the paragraph (tighten to -8 %, else loosen to +4 %) in a new document (`hd md`; `--keep` and
+  `hd html` print it as advice). Table cell text: justified by default in the report preset (`td` JUSTIFY, so a wrapped
+  line reaches the right edge), centred vertically (Markdown) or as CSS says (HTML), by Hangul's own vertical
+  alignment; CSS `height` on a cell or row is a minimum row height (H30, W12, W13).
 - Write all Korean text that you make (not copied text) by skill `ko-writing` if it is installed; 공문 text by skill
   gongmun-style. This skill does layout.

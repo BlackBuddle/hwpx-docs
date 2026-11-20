@@ -37,7 +37,7 @@ BSTYLES = {'none', 'hidden', 'solid', 'dashed', 'dotted', 'double', 'groove', 'r
 LINE_TYPE = {'dashed': 'dash', 'dotted': 'dot', 'double': 'double'}
 HANDLED = {'font-family', 'font-size', 'font-weight', 'font-style', 'color', 'background-color', 'text-align',
            'text-indent', 'line-height', 'letter-spacing', 'word-break', 'white-space', 'text-decoration',
-           'vertical-align', 'width', 'box-sizing', 'display', 'border-collapse', 'page-break-before',
+           'vertical-align', 'width', 'height', 'box-sizing', 'display', 'border-collapse', 'page-break-before',
            'page-break-after', 'break-before', 'break-after'} | {
     f'{p}-{s}' for p in ('margin', 'padding') for s in SIDES} | {
     f'border-{s}-{k}' for s in SIDES for k in ('width', 'style', 'color')}
@@ -381,6 +381,9 @@ class Conv:
             s['border'][side] = (w if st not in ('none', 'hidden') else 0, st, color(c) or s['color'])
         s['bg'] = color(d.get('background-color'))
         s['width'] = d.get('width')
+        s['height'] = d.get('height') if node.tag in ('td', 'th', 'tr') else None      # a minimum row height (table())
+        if d.get('height') and s['height'] is None:
+            self.unsupported['property height (only on table cells and rows)'] += 1
         s['border_box'] = d.get('box-sizing') == 'border-box'
         s['display'] = d.get('display', '')
         s['pbb'] = any(d.get(p) in ('always', 'page', 'left', 'right') for p in ('page-break-before', 'break-before'))
@@ -506,12 +509,26 @@ class Conv:
     def marker(self, node, b, s):
         """List item marker outside the text, like list-style-position: outside."""
         sibs = [k for k in node.parent.kids if not isinstance(k, str) and k.tag == 'li']
-        mark = f'{sibs.index(node) + 1}. ' if node.parent.tag == 'ol' else '• '
-        mw = round(sum(1 if ord(c) > 0x2E80 else 0.55 for c in mark) * s['fs'], 2)
+        mark = '• '
+        if node.parent.tag == 'ol':
+            def num(v, default):
+                return int(v) if re.fullmatch(r'-?\d+', str(v).strip()) else default
+            n = num(node.parent.attrs.get('start', 1), 1)       # <ol start>; <li value> sets the number of its item and the next ones
+            for k in sibs[:sibs.index(node) + 1]:
+                n = num(k.attrs.get('value', n), n)
+                if k is not node:
+                    n += 1
+            mark = f'{n}. '
+        # the mark ends before the text: width of the mark + a space in the real font; ONE TAB (auto tab at the hanging
+        # position, core/build.py resolve_hang) puts the text exactly at the CSS text column, wrapped lines too
+        from ..core import textfit
+        mw = round(sum(w for _, w in textfit.chars(dict(b, p=mark))), 2)
         p = b['p']
-        b['p'] = mark + p if isinstance(p, str) else [mark] + p
-        b['left'] = b['left'] - mw
+        tab = mark.rstrip() + '\t'
+        b['p'] = tab + p if isinstance(p, str) else [tab] + p
+        b['left'] = round(b['left'] - mw, 2)
         b['indent'] = -mw
+        b['tabs'] = {'stops': [], 'auto_left': True}
 
     def segments(self, kids, s, segs):
         for k in kids:
@@ -696,6 +713,9 @@ class Conv:
             cell = {'blocks': blocks, 'border': border,
                     'pad': [f'{v}pt' for v in (cst['pd_left'], cst['pd_right'], cst['pd_top'], cst['pd_bottom'])],
                     'valign': {'middle': 'center', 'bottom': 'bottom'}.get(cst['va'], 'top')}
+            hv = length(cst['height'] or trs_s['height'], cst['fs'])
+            if hv:                      # CSS height of a cell: the content box is at least this high (css_layout adds padding and border)
+                cell['css_h'] = round(hv, 2)
             fill = cst['bg'] or trs_s['bg']
             if fill and fill != '#FFFFFF':
                 cell['fill'] = fill
@@ -770,6 +790,10 @@ def selftest():
     assert t['cols'] == [51.0, 119.0] and t['rows'][0][0]['border']['top'].startswith('0.529mm'), t
     assert t['rows'][0][1]['border']['left'].startswith('0.176mm'), t['rows'][0][1]
     assert uns['property box-shadow'] == 1, uns
+    # <ol start> and <li value>: the number of an item counts on from the last value
+    ol, _ = convert('<ol start="5"><li>가</li><li>나</li><li value="10">다</li><li>라</li></ol><ol><li>마</li></ol>')
+    marks = [x['p'].split('\t')[0] if isinstance(x['p'], str) else x['p'][0].split('\t')[0] for x in ol['body']]
+    assert marks == ['5.', '6.', '10.', '11.', '1.'], marks
     print('HTML_CSS SELFTEST PASS')
 
 

@@ -14,7 +14,7 @@ import os
 import re
 import sys
 import zipfile
-from .units import CHAR_KEYS, DEFAULT_NUMBERING, NO_LINE, PARA_KEYS, TEMPLATE, esc, hu, inherit, line, quad, read, width_str
+from .units import CHAR_KEYS, DEFAULT_NUMBERING, NO_LINE, PARA_KEYS, TEMPLATE, SpecError, esc, hu, inherit, line, quad, read, width_str
 from .units import IMAGE_MEDIA, PAPER, image_size  # noqa: F401  (used by callers as build.PAPER, build.image_size)
 from .header import Header
 from . import registry
@@ -25,13 +25,114 @@ from ..objects.objects import ObjectsMixin, chart_shapes
 from ..page.page import PageMixin
 
 
+MARK = re.compile(r'(\S+)[ \t]+')
+
+
+def resolve_hang(spec):
+    """Text column of a list (rules.md H-row "list text column", docs/spec.md `hang`). A block with `"hang": <level>` (a number;
+    true = 0), directly or through its class, is a list item "mark text". Consecutive such blocks (in the body or in one cell) are
+    one list. The text column of a level is the widest mark + one space of that level in the list, so all items of a level
+    start their text on one vertical line, and the wrapped lines start there too. Written into each item (the spec is changed
+    in place, like table/inline.py resolve(), so the builder, the layout checks and the preview all see the same values):
+      - `indent` = -(text column), `left` stays (the first line starts at `left`, H25);
+      - `hang_under`: `left` = the text column of the nearest item of a lower level (the mark of a sub-level starts under the
+        text of its parent level); without it `left` is the item's own, as the 공문 levels l1-l8 use (편람: 2타 per level);
+      - the gap after the mark is ONE TAB with `tabs: {auto_left}`: Hangul puts the text at the hanging position, and
+        justification cannot stretch it (a space can; measured, rules.md H-row).
+      - `hang_mark`: a regex for the mark when it is more than one word (붙임 1.); it matches the mark and the white space
+        after it. `hang_gap`: spaces between the mark and the text for the width (default 1; 붙임 without a number: 2).
+      - the text column of a list is the widest (`left` + mark + gap) of its items: items with another `left` (the first
+        붙임 line and the next ones) still start their text on one line.
+    Running it again changes nothing."""
+    import types
+    from . import textfit
+    shim = types.SimpleNamespace(styles=spec.get('styles', {}), named=spec.get('named_styles') or {})
+    secs = spec.get('sections') or [spec]
+    for sec in secs:
+        base = {'font': '함초롬바탕', 'size': 10, **(spec.get('defaults') or {}), **(sec.get('defaults') or {})}
+        _hang_walk(sec.get('body', []), base, shim, textfit)
+
+
+def _hang_walk(blocks, ctx, shim, textfit):
+    run = []
+
+    def flush():
+        items = []                                      # [b, e, level, list id, match, mark width pt, parent item or None]
+        last = {}                                       # level -> (kind of mark, list id): another kind starts another list
+        above = []                                      # the items above, one per level: the parent of the next item
+        n_lists = 0
+        for b, e in run:
+            p = b['p']
+            first = p if isinstance(p, str) else (p[0] if isinstance(p[0], str) else p[0].get('t', ''))
+            pat = e.get('hang_mark') or MARK
+            try:
+                m = re.compile(pat).match(first)
+            except re.error as err:
+                raise SpecError(f'HANG_MARK 잘못된 패턴: {getattr(pat, "pattern", pat)} ({err}); hang_mark은 정규식입니다, '
+                                 f'예: "붙임[ \\t]+\\d+\\.[ \\t]+"') from None
+            if not m:
+                continue
+            mark = first[:m.end()].rstrip()
+            w = sum(x for _, x in textfit.chars(dict(inherit(ctx, e), p=mark + ' ' * int(e.get('hang_gap', 1)))))
+            lv = 0 if e['hang'] is True else int(e['hang'])
+            tok = mark.split()[-1][0]                   # the mark itself (`hang_mark` may start with a word: 붙임 1.)
+            kind = 'd' if tok.isdigit() else 'h' if '가' <= tok <= '힣' else 'o'
+            for k in [k for k in last if k > lv]:       # a sub-list ends with the next item of its parent level
+                del last[k]
+            if lv not in last or last[lv][0] != kind:
+                n_lists += 1
+                last[lv] = (kind, n_lists)
+            while above and above[-1][2] >= lv:
+                above.pop()
+            items.append([b, e, lv, last[lv][1], m, w, above[-1] if above else None])
+            above.append(items[-1])
+        # the text column X of a list = the widest (first-line start + mark + space) of its items, so every item of the
+        # list starts its text there; levels from the top, because a `hang_under` item starts at the text column of its parent
+        col = {}
+        for it in sorted(items, key=lambda i: i[2]):
+            b, e, lv, gid, m, w, par = it
+            left = e.get('left', 0)
+            if e.get('hang_under') and par is not None:
+                left = col[par[3]]
+            it.append(left)
+            col[gid] = max(col.get(gid, 0), left + w)
+        for b, e, lv, gid, m, w, par, left in items:
+            b['left'], b['indent'] = round(left, 2), -round(col[gid] - left, 2)
+            if 'tabs' not in b and 'tabs' not in e:
+                b['tabs'] = {'stops': [], 'auto_left': True}
+            p = b['p']
+            cut = lambda t: t[:m.end()].rstrip() + '\t' + t[m.end():]
+            if isinstance(p, str):
+                b['p'] = cut(p)
+            elif isinstance(p[0], str):
+                b['p'] = [cut(p[0])] + p[1:]
+            else:
+                b['p'] = [dict(p[0], t=cut(p[0].get('t', '')))] + p[1:]
+        run.clear()
+
+    for b in blocks:
+        e = Doc.klass(shim, b) if isinstance(b, dict) else {}
+        if e.get('hang') is not None and e['hang'] is not False and isinstance(b.get('p'), (str, list)) and b['p']:
+            run.append((b, e))
+            continue
+        flush()
+        if 'table' in e:
+            c = inherit(ctx, e)
+            for row in e['table'].get('rows', []):
+                for cell in (row.get('cells', []) if isinstance(row, dict) else row):
+                    if isinstance(cell, dict) and cell.get('blocks'):
+                        _hang_walk(cell['blocks'], c, shim, textfit)
+    flush()
+
+
 class Doc(TextMixin, TableMixin, ObjectsMixin, PageMixin):
     """One document: spec -> header.xml and section XML. Feature writers come from the mixins."""
     named = {}          # spec named_styles (Layout and Check build a Doc without __init__)
 
     def __init__(self, spec, base='.'):
         self.spec = spec
-        table_inline.resolve(spec)      # a table without `inline` is treated as a character unless it needs to flow (table/inline.py, TB11)
+        resolve_hang(spec)              # list items: the text column (rules.md H-row)
+        table_inline.resolve(spec)     # a table without `inline` is treated as a character unless it needs to flow (table/inline.py, TB11)
         self.base = base        # folder for relative picture paths (the spec file's folder)
         self.head = Header(read(os.path.join(TEMPLATE, 'Contents', 'header.xml')))
         self.bins = []          # (item id, file name in BinData, bytes, media type)
@@ -270,6 +371,34 @@ def _selftest():
     minidom.parseString(s)
     minidom.parseString(h)
     assert s.count('<hp:tc ') == 3 and 'rowSpan="2"' in s
+    # list text column (resolve_hang): one column for the items of a level, the sub-level under the parent's text, once only
+    import copy
+    sp = {'defaults': {'font': '함초롬바탕', 'size': 12}, 'body': [
+        {'p': '9. 가', 'hang': 0, 'left': 16, 'indent': -15}, {'p': '10. 나', 'hang': 0, 'left': 16, 'indent': -15},
+        {'p': '- 다', 'hang': 1, 'hang_under': True, 'left': 0}, {'p': '○ 라', 'hang': 0, 'left': 16}, {'p': '본문'}]}
+    resolve_hang(sp)
+    b = sp['body']
+    assert b[0]['indent'] == b[1]['indent'] < -15 and b[0]['p'] == '9.\t가' and b[1]['p'] == '10.\t나', b
+    assert abs(b[2]['left'] - (16 - b[0]['indent'])) < 0.02 and b[2]['p'] == '-\t다', b[2]
+    assert b[3]['indent'] > b[0]['indent'] and b[0]['tabs']['auto_left'] and 'tabs' not in b[4]    # another mark kind: its own list
+    again = copy.deepcopy(sp)
+    resolve_hang(again)
+    assert again == sp, 'resolve_hang twice changes nothing'
+    # 붙임: items with another `left` and a mark of several words still share one text column
+    at = {'defaults': {'font': '함초롬바탕', 'size': 12}, 'styles': {
+        'a': {'left': 0, 'hang': 9, 'hang_mark': r'붙임[ \t]+\d+\.[ \t]+'}, 'n': {'left': 36, 'hang': 9}},
+        'body': [{'class': 'a', 'p': '붙임  1. 가'}, {'class': 'n', 'p': '2. 나'}]}
+    resolve_hang(at)
+    a, n = at['body']
+    assert a['p'] == '붙임  1.\t가' and n['p'] == '2.\t나', at
+    assert abs((a['left'] - a['indent']) - (n['left'] - n['indent'])) < 0.02, (a, n)
+    resolve_hang(copy.deepcopy(at))
+    bad = {'styles': {'a': {'hang': 1, 'hang_mark': '붙임[ '}}, 'body': [{'class': 'a', 'p': '붙임 1. 가'}]}      # a wrong regex
+    try:
+        resolve_hang(bad)
+        raise AssertionError('a wrong hang_mark must be reported')
+    except ValueError as e:
+        assert str(e).startswith('HANG_MARK 잘못된 패턴: 붙임[ '), e
     print('HWPX_BUILD SELFTEST PASS')
 
 
@@ -278,7 +407,11 @@ if __name__ == '__main__':
         _selftest()
     else:
         spec = json.load(open(sys.argv[1], encoding='utf-8'))
-        print('HWPX WRITTEN', write(spec, sys.argv[2], os.path.dirname(os.path.abspath(sys.argv[1]))))
+        try:
+            print('HWPX WRITTEN', write(spec, sys.argv[2], os.path.dirname(os.path.abspath(sys.argv[1]))))
+        except ValueError as e:                     # a fault in the spec (unknown class, bad hang_mark): the message, no traceback
+            print(e)
+            sys.exit(2)
         if '--no-check' not in sys.argv:            # every build reports readability (it changes nothing)
             from ..check import readability
             readability.report_only(spec)

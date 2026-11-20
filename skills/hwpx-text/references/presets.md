@@ -23,7 +23,7 @@ Keys (names as in `text/mdparse.py`):
 | `FONT` | short font key -> Hangul face name (`"batang": "함초롬바탕"`) |
 | `BORDER` | CSS width -> Hangul line width (`"0.5pt": "0.12mm"`) |
 | `PAGE` | `width_mm`, `height_mm`, `left_mm`, `right_mm`, `top_mm`, `bottom_mm` |
-| `TEXT` | style name -> `font size bold color align left indent before after line` (pt, %; `word_break` optional). With LAYOUT `css`, `left`/`indent` are CSS padding-left/text-indent |
+| `TEXT` | style name -> `font size bold color align left indent before after line` (pt, %; `word_break` optional). With LAYOUT `css`, `left`/`indent` are CSS padding-left/text-indent. List roles (`l0`, `l1`, `l2`) may carry `hang` (level) and `hang_under` (docs/spec.md): the builder then puts the item text and its wrapped lines on one column. `td` is JUSTIFY by default (user 2026-11-20, "기본은 양쪽정렬"): a wrapped line reaches the right edge; a one-line cell stays at the left. A Markdown table cell is centred vertically |
 | `BOX` | box name -> `sides` (top, right, bottom, left: `[width, colour]` or null), `fill`, `pad` (pt: top, right, bottom, left) |
 | `THIN`, `THICK`, `CELL_PAD`, `HEAD_FILL`, `BLANK_ROW_PT`, `BAR_WIDTH_PT`, `LIST_MARK` | table lines, cell margins, header fill, empty-row height, chapter bar width, list marks by level |
 | `MAP` | Markdown element -> style name for the elements of section 2 (null = UNMAPPED) |

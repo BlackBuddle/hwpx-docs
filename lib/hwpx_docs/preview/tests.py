@@ -48,7 +48,7 @@ def layout_test():
     from ..core import read as rd                  # rules P08: Hangul's own space is 0.5 em; useFontSpace: the font's
     from .measure import cwidth
     st = dict(rd.DEF_CHAR, font='함초롬바탕', size=10)
-    assert cwidth(' ', st) == 5.0 and abs(cwidth(' ', dict(st, font='함초롬돋움', spacing=-10)) - 4.0) < 1e-9
+    assert cwidth(' ', st) == 5.0 and abs(cwidth(' ', dict(st, font='함초롬돋움', spacing=-10)) - 4.5) < 1e-9   # 자간 = % of the advance (H28)
     assert 2.5 < cwidth(' ', dict(st, font_space=True)) < 3.5                  # GDI 0.3 em (report-markdown)
     assert cwidth('가', dict(st, vcell=True)) == 10.0 and cwidth('.', dict(st, vcell=True)) == 10.0     # 세로쓰기 cells
     print('PREVIEW LAYOUT PASS', len(pages), 'pages')

@@ -219,11 +219,15 @@ def run(argv, found):
     mod, pre, _ = found.get(argv[0]) or (COMMANDS.get(argv[0]), [], '')
     sys.argv = [f'hd {argv[0]}'] + pre + argv[1:]
     from hwpx_docs.core import protect
+    from hwpx_docs.core.units import SpecError
     try:
         runpy.run_module(f'hwpx_docs.{mod}', run_name='__main__', alter_sys=True)
     except protect.ProtectedDocument as e:       # protected file: say so, no traceback
         print(e)
         return protect.EXIT_CODE
+    except SpecError as e:                       # a fault in the spec that the user fixes (wrong hang_mark): the message, exit 2
+        print(e)
+        return 2
     return 0
 
 

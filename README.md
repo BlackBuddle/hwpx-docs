@@ -18,7 +18,7 @@
 
 <p>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-a3301c" alt="License: AGPL-3.0"></a>
-<a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/badge/version-0.4.0-a3301c" alt="Version 0.4.0"></a>
+<a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/badge/version-0.4.1-a3301c" alt="Version 0.4.1"></a>
 <a href="https://github.com/BlackBuddle/hwpx-docs/stargazers"><img src="https://img.shields.io/github/stars/BlackBuddle/hwpx-docs?style=flat&amp;color=a3301c" alt="GitHub stars"></a>
 <a href="#요구-사항"><img src="https://img.shields.io/badge/python-3.10%2B-a3301c" alt="Python 3.10+"></a>
 <a href="#설치"><img src="https://img.shields.io/badge/Claude%20Code-plugin-a3301c" alt="Claude Code plugin"></a>
@@ -27,7 +27,7 @@
 
 </div>
 
-HWPX(공개 국가표준 OWPML, KS X 6101)와 HWP(HWP 5.0, 한글의 바이너리 형식)를 같은 명령으로 만들고 읽고 고칩니다. 문서를 만들고 읽는 데는 한글 프로그램 없이 Python 표준 라이브러리만 씁니다(버전 0.4.0).
+HWPX(공개 국가표준 OWPML, KS X 6101)와 HWP(HWP 5.0, 한글의 바이너리 형식)를 같은 명령으로 만들고 읽고 고칩니다. 문서를 만들고 읽는 데는 한글 프로그램 없이 Python 표준 라이브러리만 씁니다(버전 0.4.1).
 
 > 한글, 한컴오피스는 (주)한글과컴퓨터의 상표 또는 등록 상표입니다. 이 프로젝트는 (주)한글과컴퓨터와 관계가 없습니다.
 
@@ -60,6 +60,8 @@ Claude Code에 설치하고 말로 시키면 이런 일을 합니다.
 - 받은 양식은 글자만 바꿔 채웁니다. 칸 이름(성명, 연락처 등)이나 칸 번호로 값을 넣고 체크 상자를 표시하고 낱말을 바꿉니다. 바꾼 뒤에는 구조가 같은지, 줄이 늘어 쪽이 밀리는지, 옛 문구나 ○○ 같은 자리표시가 남았는지 검사합니다.
 - HWPX나 HWP를 텍스트나 Markdown으로 꺼냅니다. 표는 Markdown 표로, 각주는 `[^n]`으로 바꿉니다.
 - Markdown을 개조식 보고서로 바꿉니다(프리셋). HTML은 CSS를 브라우저처럼 계산해 같은 모양의 HWPX로 바꿉니다.
+- 목록 항목은 글머리(○, -, ·, 1., 가.) 뒤에 탭 하나를 넣어 둘째 줄부터 첫 줄의 글자 밑에서 시작합니다. 한 목록의 글자 열은 하나이고 보고서 프리셋의 하위 글머리는 위 단계의 글자 열에서 시작합니다. 공문 항목(l1~l8)은 편람대로 단계마다 2타씩 들어가며 붙임 줄도 같은 방식입니다(스펙 키 `hang`). HTML은 `<ol start>`와 `<li value>`를 읽습니다.
+- 표 칸의 글은 위아래 가운데에 둡니다. 여러 행에 걸친 칸은 걸친 높이의 가운데에 오고 CSS `height`와 `vertical-align`을 따릅니다. 칸 글은 기본이 양쪽 정렬이고 한 줄짜리 칸은 왼쪽에 남습니다.
 - 이미지로 받은 양식을 다시 만드는 절차를 담았습니다. 선과 격자를 mm 단위로 재고 확인 목록을 쓰고 렌더링한 쪽을 겹쳐 비교합니다.
 - 한글 없이 쪽 그림을 그립니다(자체 렌더러). 표, 도형, 그림, 차트, 수식, 각주, 세로쓰기, 다단, 어울림 배치, 한글의 쪽 나눔 규칙을 따릅니다.
 - 쪽 모양새를 점검하고 고칩니다(`hd pagefit`). 기본은 제목이 쪽 끝에 홀로 남거나 한 줄만 넘어가는 것 같은 최소한만 고칩니다. "읽기 좋게"라고 요청하면 `readable` 프로필로 읽다가 앞쪽을 다시 넘겨야 하는 곳을 없애고 쪽은 꽉 차게 맞춥니다.
@@ -67,7 +69,7 @@ Claude Code에 설치하고 말로 시키면 이런 일을 합니다.
 - HWP와 HWPX를 서로 바꾸고 PDF로 저장합니다(`hd convert`, 한글 필요). 한글 없이는 `hd hwp tohwpx`, `hd hwp fromhwpx`로 바꿉니다.
 - 받은 .hwp(HWP 5.0)도 .hwpx와 같은 명령으로 한글 없이 다룹니다. 글자만 바로 고쳐 나머지 바이트는 그대로 둡니다(`hd edit`). 칸 이름·칸 번호·누름틀로 값을 넣고 고친 뒤 양식이 그대로인지 전후 파일을 비교하며(`hd guard`), .hwp를 쪽 그림으로 그려 전후 쪽을 나란히 봅니다(`hd preview`, `hd hwp compare`). 쪽 맞춤, 가독성 점검, 개인 정보 가리기, 새 문서 만들기는 .hwp → HWPX → 명령 → .hwp 길로 같은 명령이 처리합니다([HWPX와 HWP 대조표](docs/hwp-parity.md)).
 - 공문은 시작 스펙과 공문 문장 규칙(gongmun-style 스킬)으로 씁니다.
-- 가독성을 점검합니다(RD01~RD13). 단어 중간 줄바꿈, 양쪽 정렬로 벌어진 빈칸, 선에 붙은 셀 글자 같은 문제를 찾습니다.
+- 가독성을 점검합니다(RD01~RD14). 단어 중간 줄바꿈, 양쪽 정렬로 벌어진 빈칸, 선에 붙은 셀 글자, 끝 줄에 단어 몇 개만 남는 문단 같은 문제를 찾습니다. 끝 줄이 글줄 폭의 30 % 미만이거나 2어절 이하(60 % 미만)인 문단(RD14)은 문단 자간을 1 %씩 바꿔 고칩니다. 먼저 -8 %까지 줄여 한 줄을 없애고 안 되면 +4 %까지 늘려 같은 줄 수로 끝 줄을 채웁니다. 새 문서(Markdown)만 고치고 이미 있는 문서와 HTML은 알려만 줍니다.
 
 양식마다 따로 짠 코드는 없습니다. 모든 문서는 같은 기본 요소(쪽, 문단, 런, 표, 도형, 그림)로 만들고 기본 요소마다 쓰는 XML은 한글 2024가 저장한 파일에서 확인했습니다.
 
@@ -431,6 +433,7 @@ C11 보안은 0.2.0의 5개에 "보호된 파일 읽기"가 더해져 6개 항�
 - 스펙의 그림·OLE 경로(`src`)는 어느 폴더의 파일이든 문서에 넣습니다. 남이 준 스펙으로 만들 때는 `src`가 가리키는 파일을 먼저 확인하십시오.
 - HTML 변환은 인쇄용 CSS의 주요 속성만 계산합니다. 쓰지 않은 속성은 `UNSUPPORTED`로 알립니다. 브라우저는 keep-all에서도 한글 낱말 뒤 여는 괄호 앞에서 줄을 바꾸지만 한글은 빈칸에서만 줄을 바꾸므로 한 줄이 다르게 나뉠 수 있습니다.
 - 실제 글꼴 폭 계산은 Windows에서만 정확합니다.
+- 줄 수 예측(글자 폭 모델)은 함초롬바탕, 휴먼명조, 맑은 고딕에서 한글과 견줘 맞췄습니다(문단 144개 시험은 자간 0과 -3 %, 숫자·영문·괄호가 섞인 144개는 자간 -5 %, 0, +3 %에서 모두 같았습니다). 다른 글꼴은 견주지 않았습니다.
 - 자체 렌더러는 한글이 그린 쪽과 같은 모양을 목표로 하지만 같은 이미지는 아닙니다. 한글 쪽과 잉크 차이는 예제 6개 평균 11.9 %, 시험 파일 23쪽 평균 13.9 %, 차트 시험 파일 평균 18.4 %입니다(글자 가장자리 차이 때문에 0이 될 수 없습니다). 글자 효과(외곽선·그림자·양각·음각), 강조점, 무늬 채움은 그리지 않습니다. 그리지 못하는 개체는 빨간 점선 상자에 종류 이름을 써서 표시하고 `PREVIEW NOT DRAWN` 경고 줄을 냅니다. 충실도 표는 [preview/coverage.md](lib/hwpx_docs/preview/coverage.md)에 있습니다.
 - pagefit의 쪽 계산은 한글에서 잰 규칙을 따르지만 한글과 몇 mm 다를 수 있습니다. 다단·각주·떠 있는 개체가 있는 구역은 자체 렌더러의 쪽 배치를 읽습니다. 세로쓰기 구역은 점검하지 않습니다.
 
@@ -439,6 +442,19 @@ C11 보안은 0.2.0의 5개에 "보호된 파일 읽기"가 더해져 6개 항�
 `python lib/hd.py selftest`는 패키지마다(core, text, table, objects, page, edit, extract, chart, convert, fields, gongmun, objects2, pagefit, pagex, preview, render, secure, textstyle, check) 자체 시험을 돌린 뒤 한글 2024로 만든 시험 파일 271개(`tests/fixtures`)를 읽고 다시 만들어 두 스펙이 같은지 확인합니다. 한글 프로그램은 필요 없습니다. 시험이 만든 임시 폴더는 끝날 때 지워지고 지워졌는지도 시험합니다.
 
 `python lib/hd.py textstyle scan --repo`는 저장소의 모든 파일(파일 이름, 본문, HWPX 압축 안의 모든 항목, PNG 메타데이터)에서 계정 이름, 사용자 폴더 경로, 이메일 주소를 찾습니다. 예외는 [privacy.py](lib/hwpx_docs/textstyle/privacy.py)의 `ALLOWED`에 이유와 함께 적은 것과 `example.com` 같은 가상 주소뿐입니다.
+
+## 0.4.1에서 바뀐 점
+
+- 목록 글자 열: 글머리(○, -, ·, 1., 가.) 뒤에 공백 대신 탭 하나를 넣고 항목마다 글머리 폭을 재서 한 목록의 글자 열을 하나로 맞춥니다. 둘째 줄부터 첫 줄의 글자 밑에서 시작합니다(스펙 키 `hang`, 규칙 H27). 한글 2024에서 300 dpi로 재면 첫 줄과 둘째 줄 글자의 어긋남이 Markdown 항목 7개에서 0.06 mm 이하, 공문 항목 14개에서 0.00 mm이고 전에는 0.3~2 mm였습니다.
+- 하위 글머리: 보고서 프리셋(□ ○ - ·)의 하위 글머리는 위 단계의 글자 열에서 시작하고 어긋남은 0.05 mm 이하입니다. 공문(l1~l8)은 단계마다 2타씩 들어가는 편람 규칙을 그대로 두고 줄 맞춤만 고쳤습니다.
+- 붙임: 붙임 줄도 같은 방식입니다. 붙임 1~3의 글자가 한 줄(37.71 mm)에서 시작하고 둘째 줄과의 어긋남은 0.00 mm입니다. 번호 없는 붙임은 `attach_one` 클래스를 씁니다.
+- HTML 목록: `<ol start>`와 `<li value>`를 읽습니다. 전에는 열 번째 항목이 `2.`로 나왔습니다.
+- 끝 줄(RD14): 끝 줄에 단어 몇 개만 남는 문단을 문단 자간으로 고칩니다(-8 %~+4 %, 1 %씩). `hd md`는 고치고 `--keep`, `hd html`, `hd readability`는 `RD14 p6: last line "경우." 1 word (6 %) -> spacing -2 %`처럼 알려만 줍니다. 표 칸 안의 문단도 고치고 행 높이는 고친 뒤에 계산하며 한글에서 본문 항목과 표 칸 모두 3줄이 2줄로 줄었습니다.
+- 자간 계산: 자간은 공백까지 포함한 각 글자 폭의 %로 계산합니다. 줄 수 예측이 한글과 다른 문단이 시험 문단 144개 중 15개에서 0개로 줄었습니다(규칙 H28).
+- 표 칸 세로 정렬: Markdown 표 칸은 가운데가 기본이고 여러 행에 걸친 칸은 걸친 높이의 가운데에 오며 어긋남은 0.11 mm입니다. CSS `height: 30mm` 행은 한글에서 30.3 mm가 됩니다(전에는 5.8 mm). 위 행에서 내려온 병합 칸을 칸 위치 계산에 넣어, 병합 칸 아래 칸의 폭을 틀리게 잡던 문제를 고쳤습니다(행 높이 예측 27.0 mm가 10.05 mm로, 한글은 10.2 mm).
+- 표 칸 글 정렬: 보고서 프리셋의 표 칸 글(`td`)은 기본이 양쪽 정렬입니다(전에는 왼쪽). 한 줄짜리 칸은 왼쪽에 남습니다.
+- 오류 안내: 잘못된 `hang_mark` 정규식은 `hd build`와 `hd readability` 모두 한 줄 안내와 종료 코드 2로 알립니다.
+- 예제: `examples`의 7개를 새 동작으로 다시 만들었습니다.
 
 ## 0.4.0에서 바뀐 점
 
@@ -485,9 +501,10 @@ C11 보안은 0.2.0의 5개에 "보호된 파일 읽기"가 더해져 6개 항�
 
 ## English
 
-hwpx-docs is a Claude Code plugin that makes, reads, edits and checks HWPX documents (OWPML, Korean standard KS X 6101) and HWP documents (the binary HWP 5.0 format) for Hancom Office Hangul, with the same commands for both. Version 0.4.0. Generation needs only the Python 3.10+ standard library on any OS; rendering in Hangul, conversion and password protection need Windows with Hangul 2024 and pywin32.
+hwpx-docs is a Claude Code plugin that makes, reads, edits and checks HWPX documents (OWPML, Korean standard KS X 6101) and HWP documents (the binary HWP 5.0 format) for Hancom Office Hangul, with the same commands for both. Version 0.4.1. Generation needs only the Python 3.10+ standard library on any OS; rendering in Hangul, conversion and password protection need Windows with Hangul 2024 and pywin32.
 
 - Install: `/plugin marketplace add BlackBuddle/hwpx-docs`, then `/plugin install hwpx-docs@blackbuddle` (11 skills).
+- Version 0.4.1: list items put their text on one column (a TAB after the mark, spec key `hang`): wrapped lines start under the first letter of the item text, the mark of a sub-level starts on the text column of its parent (report preset; the 공문 levels keep 2 characters per level), 붙임 lines and HTML `<ol start>` / `<li value>` follow the same rules; measured on Hangul 2024 at 300 dpi, the offset between line 1 and line 2 is 0.06 mm or less (before: 0.3 to 2 mm). Readability rule RD14 (a paragraph whose last line holds only a few words) is fixed with the character spacing of the paragraph (-8 % to +4 %, in 1 % steps) for a new Markdown document and only reported for an existing document and for HTML. The spacing model is a % of each character width, spaces included; textfit line counts differ from Hangul in 0 of 144 test paragraphs (master: 15 of 144). Table cells: Markdown cells are centred vertically, a cell over several rows is centred in the spanned height, CSS `height` rows work (a 30 mm row was 5.8 mm, now 30.3 mm in Hangul), the width of a cell under a row-span is right, and the text of a cell is justified by default (a one-line cell stays left). A wrong `hang_mark` pattern gives one message and exit code 2. The 7 examples were rebuilt.
 - Version 0.4.0: the binary .hwp is read and written without Hangul (checked on 153 official blank forms against Hangul 2024: .hwp -> HWPX equal to Hangul's own HWPX for 130, HWPX -> .hwp equal to Hangul's own save for 153 (150 when the 3 differences that keep an original value, with their reasons, are not allowed), the round trip equal at Hangul's level for 129, the written files open in Hangul with the same page count for 153 of 153; not byte equal, and the differences are listed in the Korean section ".hwp 지원"); a table is treated as a character by default (a long table, a table with repeated header rows or a table with a position flows); two optional add-on plugins from the same marketplace: `hwpx-docs-forms` (layout rules of official Korean forms) and `hwpx-docs-privacy` (the model sees pseudonym tags such as `⟪성명1⟫` instead of the personal data that its rules find; real values stay in a local vault and return when a document is written; hooks refuse direct reads of the documents). The privacy layer prevents slips in everyday work; it is not a boundary against someone who works around it on purpose, it is rule-based and can miss an odd layout, and it gives no legal guarantee (all known limits are listed in the Korean section "개인정보 보호의 한계"). Install: `/plugin install hwpx-docs-forms@blackbuddle`, `/plugin install hwpx-docs-privacy@blackbuddle`.
 - Version 0.3.0: tabs, user styles, drop caps, 덧말, picture bullets; odd/even headers, master pages, note shapes, vertical writing, line numbers, column changes, 원고지, labels; 18 table line types, gradient and picture fills, floating tables, captions, formula cells, cell protection; picture effects, groups, 글맵시, wrapping, connectors, OLE, proofreading marks, area and scatter charts with a secondary axis; cross-references, table of contents, index, 누름틀, form objects (`form`), track changes; password, distribution document and personal data masking (`secure`); an own page renderer that draws equations, vertical writing, footnotes, wrapping and Hangul's keep rules; page fitting with profiles (`pagefit`, skill hwpx-readability); automatic clean-up of temporary folders; a repository privacy scan (`textstyle scan --repo`).
 - Command line: `python lib/hd.py help` lists every command.

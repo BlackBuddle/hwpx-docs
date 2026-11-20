@@ -88,16 +88,25 @@ def gdi():
 def chars(b):
     """Paragraph spec -> list of (char, width pt)."""
     base = dict(font=b.get('font', '함초롬바탕'), font_latin=b.get('font_latin'), size=b.get('size', 10),
-                bold=b.get('bold', False), spacing=b.get('spacing', 0))
+                bold=b.get('bold', False), spacing=b.get('spacing', 0), font_space=b.get('font_space', False))
     p = b.get('p', '')
     runs = [p] if isinstance(p, str) else p
     out = []
+    hang, x = -b.get('indent', 0), 0.0      # a tab in the first line of a hanging paragraph ends at the text column
     for r in runs:
         st = dict(base, **{k: v for k, v in r.items() if k in base}) if isinstance(r, dict) else base
         t = r if isinstance(r, str) else r.get('t', '')
         for ch in t or '':
             face = st['font'] if cjk(ch) else (st['font_latin'] or st['font'])
-            w = gdi().em(ch, face, bool(st['bold'])) * st['size'] + (st['spacing'] or 0) / 100 * st['size']
+            em = gdi().em(ch, face, bool(st['bold']))
+            if ch == ' ' and not st['font_space']:
+                em = 0.5            # Hangul without "글꼴에 어울리는 빈칸" (font_space) draws a space 0.5 em wide in every font (measured)
+            # the 자간 is a % of the advance of each character, a space included (measured 2026-11-20 on Hangul syllables, Latin,
+            # digits, punctuation and spaces, font_space on and off: a line of any text changes by the 자간 % of its width)
+            w = em * st['size'] * (1 + (st['spacing'] or 0) / 100)
+            if ch == '\t' and hang > x:
+                w = hang - x
+            x += w
             out.append((ch, w))
     return out
 

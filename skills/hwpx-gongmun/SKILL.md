@@ -18,10 +18,13 @@ follow skill gongmun-style (`${CLAUDE_PLUGIN_ROOT}/skills/gongmun-style/`). Chec
    the sizes and lines. The table is `${CLAUDE_PLUGIN_ROOT}/docs/gongmun-defaults.md`.
 2. Items: one block per item with `"class": "l1"` ... `"l8"` and the symbol written in the text:
    L1 `1.` L2 `가.` L3 `1)` L4 `가)` L5 `(1)` L6 `(가)` L7 `①` L8 `㉮` (levels.json). Each level starts 2타 further
-   right; wrapped lines align to the first letter of the item text (the class indents are measured for 휴먼명조
-   12 pt; for another font or size measure `hd textwidth "가. " --font <face> --size <pt>` and set `indent`).
+   right; wrapped lines align to the first letter of the item text. The classes carry `hang` (the level): the builder
+   measures the widest mark of each level in the list (`10.` is wider than `1.`), writes one TAB after the mark and
+   sets the hanging width, so no `indent` is measured by hand for any font or size. Write the mark and one space
+   in the text (`"p": "10. 안건"`); do not write a tab or two spaces.
    A level with one item has no symbol. 가나다... continues with 거너더... after 하.
-3. 붙임 and `끝.` (levels.json A1-A2, E1-E6): `끝.` goes 2 spaces after the last text; with 붙임 after the last
+3. 붙임 and `끝.` (levels.json A1-A2, E1-E6): several 붙임 use `attach` (`붙임  1. ...`) and `attach_next` (`2. ...`), one 붙임 without a
+   number uses `attach_one` (`붙임  ○○○계획서 1부.`); the classes keep the wrapped lines and the next items on one text column. `끝.` goes 2 spaces after the last text; with 붙임 after the last
    붙임 line; after a table whose last cell is filled, on its own line below the table; a table that ends early
    gets `이하 빈칸` in the next cell and no `끝.`.
 4. 결문 (closing block), official order and words: 발신명의 (centred; `관인생략` or `서명생략` may stand right of it), `수신자`

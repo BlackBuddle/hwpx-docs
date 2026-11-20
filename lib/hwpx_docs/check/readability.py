@@ -23,6 +23,7 @@ nothing. A new document (Markdown, a description) gets the safe fixes (marked "f
 | RD11 | empty paragraphs for space | 2+ empty paragraphs in a row | advice: use before/after |
 | RD12 | long centred text | 3+ lines centred | advice: left or justify |
 | RD13 | space next to a block table that Hangul drops | `before` on the paragraph after a table or on the table block (rules W05) | move it to the table margin |
+| RD14 | short last line | 2+ lines (justify or left), last line narrower than 30 % of the line, or 2 words or fewer that fill less than 60 % | `spacing` (자간) of the whole paragraph: tighten 1 % steps to -8 % until the last line is gone; else loosen to +4 % until the last line passes |
 """
 from ..core import tmpdir
 import json
@@ -33,9 +34,13 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 from ..core import read as hwpx2spec
 from ..core import textfit
-from ..core.layout import Layout, mm, text_of
+from ..core.layout import Layout, Para, mm, text_of
 
 HANGUL = re.compile('[가-힣]')
+TIGHT, LOOSE = 8, 4                 # RD14: the most that the 자간 changes, in % of the font size (D4)
+MIN_WORDS, MIN_FILL = 3, 0.30       # RD14: a last line needs 3 words, and 30 % of the line
+SAFE = 2.0                          # RD14: pt that the fixed paragraph keeps free on its lines (textfit vs Hangul)
+WORDS_FILL = 0.60                  # ... but 1-2 long words that fill 60 % of the line or more are not a gap (my reading of D4)
 
 
 def luminance(c):
@@ -62,8 +67,45 @@ def marked(cell):
         for x in cell.get('blocks', [])))
 
 
+def last_line(p):
+    """(words, fill) of the last line of Para `p`: number of space separated words, width / width of a later line."""
+    s, e = p.lines[-1]
+    seg = p.cs[s:e]
+    while seg and seg[-1][0] == ' ':
+        seg = seg[:-1]
+    words = ''.join(c for c, _ in seg).split()
+    other = textfit.widths(p.props, p.width)[1]
+    return len(words), (sum(w for _, w in seg) / other if other > 0 else 1.0), ''.join(words[-1:])
+
+
+def describe_last(p):
+    words, fill, tail = last_line(p)
+    return f'last line "{tail}" {words} word{"s" if words != 1 else ""} ({fill * 100:.0f} %)'
+
+
+def short_last(p):
+    w, fill, _ = last_line(p)
+    return fill < MIN_FILL or (w < MIN_WORDS and fill < WORDS_FILL)
+
+
+def spacing_fix(p):
+    """RD14 (D4): the smallest 자간 change that removes a short last line -> new spacing (%) or None.
+    First tighten (1 % steps, at most TIGHT): the paragraph has one line less. Else loosen (at most LOOSE): the same
+    line count and a last line that passes. Layout by textfit.wrap with the new spacing."""
+    base = p.props.get('spacing') or 0
+    n = len(p.lines)
+    for d in [-i for i in range(1, TIGHT + 1)] + list(range(1, LOOSE + 1)):
+        # the test line is SAFE pt narrower: Hangul wrapped a cell line that textfit fitted with 0.8 pt to spare (measured,
+        # rules.md H-row); 2.2 pt to spare was right
+        q = Para(p.block, dict(p.props, spacing=base + d, right=(p.props.get('right') or 0) + SAFE), p.width, p.fill,
+                 p.where, p.cell)
+        if (len(q.lines) < n) if d < 0 else (len(q.lines) == n and not short_last(q)):
+            return base + d
+    return None
+
+
 class Check(Layout):
-    """The rules RD01-RD13 on the layout of a spec (core/layout.py)."""
+    """The rules RD01-RD14 on the layout of a spec (core/layout.py)."""
 
     def __init__(self, spec):
         super().__init__(spec)
@@ -151,6 +193,17 @@ class Check(Layout):
                 if not pr.get('keep_next'):
                     self.add('RD08', p.where, f'heading "{short}" can end a page alone',
                              lambda b=p.block: b.update(keep_next=True))
+            # RD14 short last line (a table cell too: Hangul fits its row to the lines)
+            if nl >= 2 and pr.get('align', 'justify') in ('justify', 'left') and short_last(p):
+                what = describe_last(p)
+                new = spacing_fix(p)
+                if new is None:
+                    self.add('RD14', p.where, f'{what}; no 자간 change within -{TIGHT} to +{LOOSE} % helps (advice: reword)', None)
+                else:
+                    def fx(b=p.block, v=new):
+                        b.update(spacing=v)
+                    fx.hint = f'spacing {new - (pr.get("spacing") or 0):+d} %'
+                    self.add('RD14', p.where, what, fx)
             # RD12 long centred text
             if pr.get('align') == 'center' and nl >= 3:
                 self.add('RD12', p.where, f'{nl} centred lines "{short}"', None)
@@ -213,7 +266,7 @@ def fix(findings):
 
 def report(findings, out=print):
     for rid, where, msg, f in findings:
-        out(f'{rid} {where}: {msg}' + (' -> fix' if f else ''))
+        out(f'{rid} {where}: {msg}' + (f' -> {getattr(f, "hint", "fix")}' if f else ''))
     ids = {}
     for rid, *_ in findings:
         ids[rid] = ids.get(rid, 0) + 1
@@ -236,6 +289,25 @@ def selftest():
     assert b[1]['word_break'] == 'word' and b[1]['line'] == 160 and b[2]['color'] == '#000000' and b[0]['keep_next']
     assert b[5]['table']['rows'][0][0]['pad'] == [1.8, 1.8, 0.5, 0.5]
     assert b[6]['before'] == 0 and b[5]['table']['margin'] == [1, 1, 1, 3.53], (b[6], b[5]['table'].get('margin'))
+    # RD14: a last line of one word; the 자간 fix removes the line (tighten) or fills it (loosen)
+    base = {'font': '함초롬바탕', 'size': 12, 'align': 'justify', 'word_break': 'word'}
+    for extra in range(40):
+        txt = '가나다라마 ' * 16 + '가' * extra + '나다 경우.'
+        sp = {'page': {'size': [210, 297]}, 'defaults': base, 'body': [{'p': txt}]}
+        rd = [x for x in check(sp) if x[0] == 'RD14']
+        if rd and rd[0][3]:
+            n0 = textfit.count_lines(dict(base, p=txt), 170)
+            assert fix(rd) == 1 and sp['body'][0]['spacing'] != 0
+            assert textfit.count_lines(dict(base, p=txt, spacing=sp['body'][0]['spacing']), 170) <= n0
+            assert not [x for x in check(sp) if x[0] == 'RD14'], 'fixed: no RD14 left'
+            break
+    else:
+        raise AssertionError('RD14 not found')
+    assert report([rd[0]], lambda s: None) is None
+    # a cell under a row-span cell sits in the next column: its width is that column's (Layout, as the builder places cells)
+    rs = {'body': [{'table': {'cols': [30, 95], 'inline': False, 'rows': [[{'p': '가', 'rs': 2}, {'p': '나'}], [{'p': '다'}]]}}]}
+    cell = [p for p in Layout(rs).paras if p.text == '다'][0]
+    assert abs(cell.width - (95 - 3.6)) < 0.1, cell.width
     print('READABILITY SELFTEST PASS')
 
 

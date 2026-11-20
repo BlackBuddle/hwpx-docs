@@ -162,7 +162,7 @@ register_page_layer(line_numbers, 'over')
 
 | module | function | input -> output |
 |---|---|---|
-| `check/readability.py` | `check(spec)`, `fix(findings)`, `report(findings)`, `report_only(spec)` | RD01-RD12 findings; safe fixes in place |
+| `check/readability.py` | `check(spec)`, `fix(findings)`, `report(findings)`, `report_only(spec)` | RD01-RD14 findings; safe fixes in place |
 | `check/check_xml.py` | `Index(spec)`, `query(ix, q)`; `hd check file.hwpx checklist.md` | checklist rows -> OK / FAIL |
 | `check/measure.py` | `hd measure image.png --page-mm 210` | lines, grid, ink box, text bands in mm |
 | `check/hwpx_diff.py` | `diff(a, b)`; `hd diff dump|diff|sdiff` | XML difference of two HWPX files |

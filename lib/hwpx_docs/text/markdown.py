@@ -18,6 +18,7 @@ import types
 
 from ..text import mdparse as G
 from ..core import build as hwpx_build
+from ..core.units import column_starts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRESET_DIR = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'presets'))     # <plugin>/presets
@@ -72,6 +73,9 @@ def para(name, text='', **over):
              after=t['after'], line=t['line'])
     if 'word_break' in t:
         b['word_break'] = t['word_break']
+    for k in ('hang', 'hang_under'):            # a list level: the builder sets the text column (core/build.py resolve_hang)
+        if k in t:
+            b[k] = t[k]
     segs = G.segments(text) if text else []
     if len(segs) == 1 and segs[0][0] == 'n':
         b['p'] = segs[0][1]
@@ -104,18 +108,20 @@ def gap(pt):
     return para('gap', before=pt)
 
 
-def spec(md, fallback=False, base_dir='.', log=print):
-    """Markdown -> spec. Returns (spec, unmapped); with unmapped parts and no fallback the spec is None."""
+def spec(md, fallback=False, base_dir='.', log=print, fit=None):
+    """Markdown -> spec. Returns (spec, unmapped); with unmapped parts and no fallback the spec is None.
+    fit: a list = a new document (not --keep): the RD14 자간 fix is applied in table cells before the row heights are
+    computed, and each fix is appended to the list as (where, message, hint); None = no fix."""
     found = scan(md)
     unmapped = [f for f in found if resolve(f[1])[0] is None]
     if unmapped and not fallback:
         return None, unmapped
     md, notes = rewrite(md, found, log if fallback else None)
     meta, blocks = G.parse(md)
-    return spec_from(meta, retag(blocks), notes, base_dir), unmapped
+    return spec_from(meta, retag(blocks), notes, base_dir, fit), unmapped
 
 
-def spec_from(meta, blocks, notes=None, base_dir='.'):
+def spec_from(meta, blocks, notes=None, base_dir='.', fit=None):
     p = P.PAGE
     W = p['width_mm'] - p['left_mm'] - p['right_mm']
     body = [para('docno', meta['docno'])] if meta['docno'] else []      # "문서: ..." line of the Markdown
@@ -158,12 +164,14 @@ def spec_from(meta, blocks, notes=None, base_dir='.'):
             head, rows, fr = b[1], b[2], b[3]
             cols = [W * f for f in fr]
             pad = [f'{P.CELL_PAD[3]}pt', f'{P.CELL_PAD[1]}pt', f'{P.CELL_PAD[0]}pt', f'{P.CELL_PAD[2]}pt']
-            grid = [[dict(blocks=[para('th', h)], fill=P.HEAD_FILL, pad=pad, border={'top': thick}) for h in head]]
+            # a Markdown table cell is centred (browser and Hangul default: middle; rules.md H-row, D6)
+            grid = [[dict(blocks=[para('th', h)], fill=P.HEAD_FILL, pad=pad, border={'top': thick}, valign='center')
+                     for h in head]]
             for n, r in enumerate(rows):
                 r = r + [''] * (len(head) - len(r))
                 row = []
                 for c in r[:len(head)]:
-                    cell = dict(blocks=[para('td', c)], pad=pad)
+                    cell = dict(blocks=[para('td', c)], pad=pad, valign='center')
                     if n == len(rows) - 1:
                         cell['border'] = {'bottom': thick}
                     row.append(cell)
@@ -186,7 +194,7 @@ def spec_from(meta, blocks, notes=None, base_dir='.'):
          # word_break "word": the HTML has CSS word-break: keep-all (breaks only between words)
          'defaults': dict(char('para'), align='justify', line=160, word_break='word' if CSS else 'char'),
          'body': [expand_runs(b, notes or {}) for b in body]}
-    return css_layout(s, W) if CSS else s
+    return css_layout(s, W, fit) if CSS else s
 
 
 load_preset()   # sets P and CSS (True = the browser's layout of the HTML; False = Hangul spacing)
@@ -375,9 +383,10 @@ def picture(src, alt, width_mm, base_dir):
 
 
 PT_MM = 25.4 / 72
+CSS_H_TRIM = 3.4      # pt: see cell_fix()
 
 
-def css_layout(spec, text_width_mm):
+def css_layout(spec, text_width_mm, fit=None):
     """Make the Hangul layout equal to the browser layout of the same design (user 2026-11-14: judge by the HTML).
     Measured differences (measure.py on Edge and Hangul pages of 7 report documents) and how this function removes them:
     1. HTML shows a run of spaces as one space; the browser uses the font's own space width -> collapse spaces,
@@ -386,9 +395,12 @@ def css_layout(spec, text_width_mm):
        below the text (half-leading). Hangul: before + lines x size x line% + after, text at the top of the line.
        -> after = 0 and before_i = max(after_(i-1), before_i) + hl_i - hl_(i-1), hl = size x (line% - 100) / 2.
     3. CSS table rows = padding + lines x size x line% + border (a cell height is a minimum); Hangul cells leave out
-       the extra of the last line -> explicit row heights from the CSS model; cell text starts at pad_top + hl."""
+       the extra of the last line -> explicit row heights from the CSS model; cell text starts at pad_top + hl.
+    4. CSS vertical-align (middle, bottom) is Hangul's own vertAlign of the cell (center, bottom; W12).
+    fit: a list = apply the RD14 자간 fix to the paragraphs of table cells (before the row heights) and append each fix."""
     def plain(t):
-        return ' '.join(t.split())
+        # a TAB stays: the list mark of html_css.marker() ends with one (core/build.py resolve_hang)
+        return re.sub(r'[^\S\t]+', ' ', t).strip(' \n\r\f\v')
 
     def hl(b):
         ln = b.get('line', 160)
@@ -399,7 +411,7 @@ def css_layout(spec, text_width_mm):
         (Korean char = 1 em, other = 0.55 em) that is too high for Latin text and wide titles."""
         try:
             from ..core import textfit
-            return textfit.count_lines(b, width_mm)
+            return textfit.count_lines(dict(spec.get('defaults') or {}, **b), width_mm)     # the document defaults (word_break) too
         except (ImportError, AttributeError, OSError):
             pass
         p = b.get('p', '')
@@ -420,7 +432,7 @@ def css_layout(spec, text_width_mm):
                 if t is None:                       # not a text run (note, field, ...)
                     out.append(x)
                     continue
-                t = re.sub(r'\s+', ' ', t)
+                t = re.sub(r'[^\S\t]+', ' ', t)
                 if sp and t.startswith(' '):
                     t = t[1:]
                 if t:
@@ -446,11 +458,28 @@ def css_layout(spec, text_width_mm):
             return 0
         return float(str(v).split()[0].rstrip('m')) / PT_MM
 
-    def cell_fix(cell, width_mm, border_pt):
+    def fit_last(b, width_mm, where):
+        """RD14 (rules.md H-row): 자간 change of a cell paragraph with a short last line. It comes BEFORE the row heights
+        (D5): the fix changes the line count that block_h() counts."""
+        from ..check import readability
+        props = dict(spec.get('defaults') or {}, **b)
+        p = readability.Para(b, props, width_mm, None, where, True)
+        if len(p.lines) < 2 or props.get('align', 'justify') not in ('justify', 'left') or not readability.short_last(p):
+            return
+        new = readability.spacing_fix(p)
+        if new is not None:
+            if isinstance(fit, list):
+                fit.append((where, readability.describe_last(p), f'spacing {new - (props.get("spacing") or 0):+d} %'))
+            b['spacing'] = new
+
+    def cell_fix(cell, width_mm, border_pt, where=''):
         blocks = cell.get('blocks', [])
         for b in blocks:
             fix_text(b)
         pad = [float(str(v).rstrip('pt')) for v in cell.get('pad', ['0pt'] * 4)] if isinstance(cell.get('pad'), list) else [0] * 4
+        if isinstance(fit, list):                   # an empty list is on too
+            for m, b in enumerate(blocks, 1):
+                fit_last(b, width_mm - (pad[0] + pad[1]) * PT_MM, f'{where} p{m}')
         # a CSS border lies inside the cell box: thick top/bottom borders push the text and add to the height
         bt, bb = side_pt(cell, 'top'), side_pt(cell, 'bottom')
         if bt > 0.6 or bb > 0.6:
@@ -460,6 +489,7 @@ def css_layout(spec, text_width_mm):
             cell['pad'] = [f'{v}pt' for v in pad]
         inner = width_mm - (pad[0] + pad[1]) * PT_MM
         content = 0
+        css_h = cell.pop('css_h', 0)           # CSS `height` of the cell (pt, content box): a minimum (html_css.py table())
         prev_mb = None
         for b in blocks:
             mt = b.get('before', 0)
@@ -473,8 +503,11 @@ def css_layout(spec, text_width_mm):
             b['before'] = (b.get('before', 0) + h) if n == 0 else max(max(prev_mb, b.get('before', 0)) + h - prev_hl, 0)
             prev_mb, prev_hl = b.get('after', 0), h
             b['after'] = 0
-        cell['valign'] = 'top'
-        return (pad[2] + content + pad[3]) + border_pt
+        cell.setdefault('valign', 'top')            # the title / summary / chapter boxes of the preset keep their text on top
+        # Edge: a row with `height: H` is H + padding - 2 pt high (measured on 5 tables: 20, 30, 40 mm; padding 2 and 6 pt;
+        # border 0.5 and 2 pt); this function adds the border on top, so 3.4 pt come off the CSS height (Hangul rows then
+        # are 30.2-30.5 mm, Edge 30.6-31.0: A3 asks 30 mm +/- 0.5 mm)
+        return (pad[2] + max(content, css_h - CSS_H_TRIM if css_h else 0) + pad[3]) + border_pt
 
     body = spec['body']
     prev_mb, prev_hl = 0, 0
@@ -484,21 +517,23 @@ def css_layout(spec, text_width_mm):
             t = b['table']
             bw = 0.5 if t.get('border', 'none') != 'none' else 0
             heights = []
-            for row in t['rows']:
+            spans = []                      # (first row, rows, height) of the cells that span rows
+            starts, _ = column_starts([[(cell.get('cs', 1), cell.get('rs', 1)) for cell in row] for row in t['rows']])
+            for ri, (row, row_starts) in enumerate(zip(t['rows'], starts), 1):
                 h_row = 0
-                c = 0
-                hs = []
-                for cell in row:
+                for ci, (cell, c) in enumerate(zip(row, row_starts), 1):
                     w = sum(t['cols'][c:c + cell.get('cs', 1)])
-                    c += cell.get('cs', 1)
-                    va = cell.get('valign', 'top')
-                    hs.append((cell, va, cell_fix(cell, w, bw)))
-                    h_row = max(h_row, hs[-1][2])
-                # CSS vertical-align middle/bottom: the cell text moves down inside the row (cells stay "top")
-                for cell, va, h in hs:
-                    if va in ('center', 'bottom') and cell.get('blocks') and cell.get('rs', 1) == 1:
-                        cell['blocks'][0]['before'] += (h_row - h) / (2 if va == 'center' else 1)
+                    h = cell_fix(cell, w, bw, f'p{n + 1} table r{ri}c{ci}')
+                    if cell.get('rs', 1) > 1:
+                        spans.append((ri - 1, cell['rs'], h))
+                    else:
+                        h_row = max(h_row, h)
                 heights.append(h_row)
+            for r0, k, h in spans:          # a cell over several rows that needs more room: the rows share the extra (CSS)
+                have = sum(heights[r0:r0 + k])
+                if h > have:
+                    for i in range(r0, min(r0 + k, len(heights))):
+                        heights[i] += (h - have) / k
             given = t.get('heights') or [0] * len(heights)
             # blank rows of the design: CSS height 20 pt is the content box (padding and border come on top)
             t['heights'] = [max(h, (g / PT_MM + 7 + bw) if g and g / PT_MM > 15 else 0) * PT_MM
@@ -558,6 +593,10 @@ def selftest(out_dir):
     assert any(b.get('p') == '본문 인용문' and b['size'] == P.TEXT['note']['size'] for b in body), 'blockquote -> note'
     assert any(b.get('p') == '· 4단계' and b['size'] == P.TEXT['l2']['size'] for b in body), 'list level 4 -> l2'
     assert '소항목 h4' in text and 'print(1)' in text and not re.search(r'\\u000[1-5]', text), 'no placeholder left'
+    assert [b.get('hang') for b in body if b.get('hang') is not None] == [0, 1, 2, 2], 'list levels carry `hang` (core/build.py)'
+    tbl, _ = spec('| 가 | 나 |\n|---|---|\n| 1 | 2 |\n')
+    cells = [c for b in tbl['body'] if 'table' in b for r in b['table']['rows'] for c in r if 'blocks' in c]
+    assert {c.get('valign') for c in cells[-4:]} == {'center'}, 'a Markdown table cell is centred'
     # a preset that maps the blockquote to a style: no longer UNMAPPED
     P.MAP = dict(P.MAP, blockquote='para')
     assert 'blockquote' not in {el for _, el, _ in spec(SELFTEST_MD)[1]}
@@ -578,8 +617,11 @@ def main(args):
         if miss:
             print(f'PRESET "{P.name}" IS NOT COMPLETE:', ', '.join(miss))
             sys.exit(2)
+    fixed = None if '--keep' in args else []
     s, unmapped = spec(open(src, encoding='utf-8').read(), fallback='--fallback' in args,
-                       base_dir=os.path.dirname(os.path.abspath(src)))
+                       base_dir=os.path.dirname(os.path.abspath(src)), fit=fixed)
+    for where, what, hint in fixed or []:      # RD14 fixed inside table cells (before the row heights)
+        print(f'RD14 {where}: {what} -> {hint} (fixed)')
     if s is None:
         for n, el, text in unmapped:
             print(f'UNMAPPED line {n}: {WHAT[el]}: {text[:60]}')
